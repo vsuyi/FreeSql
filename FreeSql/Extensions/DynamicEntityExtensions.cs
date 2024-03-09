@@ -8,6 +8,7 @@ using FreeSql.DataAnnotations;
 using FreeSql.Extensions.DynamicEntity;
 using FreeSql.Internal.CommonProvider;
 using FreeSql.Internal.Model;
+
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -89,6 +90,23 @@ namespace FreeSql.Extensions.DynamicEntity
         private IFreeSql _fsql = null;
         private TypeBuilder _typeBuilder = null;
 
+        static ModuleBuilder _dynamicModule = null;
+
+        static DynamicCompileBuilder()
+        {
+            //设置程序集的名称
+            CreateNewDynamicModule();
+        }
+
+        private static void CreateNewDynamicModule()
+        {
+            var assemblyName = new AssemblyName("FreeSql.DynamicCompileBuilder." + System.IO.Path.GetRandomFileName());
+            var dynamicAssemblyBuilder = AssemblyBuilder.DefineDynamicAssembly(assemblyName, AssemblyBuilderAccess.Run);
+
+            //动态在程序集内创建一个模块
+            _dynamicModule = dynamicAssemblyBuilder.DefineDynamicModule("FreeSql.DynamicCompileBuilder.Dynamics");
+        }
+
         /// <summary>
         /// 配置Class
         /// </summary>
@@ -101,17 +119,11 @@ namespace FreeSql.Extensions.DynamicEntity
             _className = className;
             _tableAttributes = attributes;
 
-            //初始化AssemblyName的一个实例
-            var assemblyName = new AssemblyName("FreeSql.DynamicCompileBuilder");
-            //设置程序集的名称
-            var defineDynamicAssembly = AssemblyBuilder.DefineDynamicAssembly(assemblyName, AssemblyBuilderAccess.Run);
-            //动态在程序集内创建一个模块
-            var defineDynamicModule =
-                defineDynamicAssembly.DefineDynamicModule("FreeSql.DynamicCompileBuilder.Dynamics");
-
             //动态的在模块内创建一个类
-            _typeBuilder =
-                defineDynamicModule.DefineType(_className, TypeAttributes.Public | TypeAttributes.Class, _superClass);
+            if (_dynamicModule.GetType(_className) != null)
+                CreateNewDynamicModule();
+
+            _typeBuilder = _dynamicModule.DefineType(_className, TypeAttributes.Public | TypeAttributes.Class, _superClass);
         }
 
         /// <summary>
